@@ -26,7 +26,18 @@ class DistanceVector(Node):
         created at the beginning of the simulation. Initializing data structure(s)
         specific to a DV node is done here."""
 
+
         super(DistanceVector, self).__init__(name, topolink, outgoing_links, incoming_links)
+        self.dv = {self.name: 0}
+        self.cost_to_neighbors = {}
+        self.next_hop = {}
+        NEG_INF = -99
+        for nb in self.outgoing_links: # Initial knowledge
+            self.cost_to_neighbors[nb.name] = nb.weight
+            self.dv[nb.name] = nb.weight
+
+
+
         
         # TODO: Create any necessary data structure(s) to contain the Node's internal state / distance vector data
 
@@ -41,6 +52,11 @@ class DistanceVector(Node):
 
         # TODO - Each node needs to build a message and send it to each of its neighbors
         # HINT: Take a look at the skeleton methods provided for you in Node.py
+        msg = {"from": self.name, "vector": self.dv.copy()}
+        for upstream in self.neighbor_names:
+            self.send_msg(msg, upstream)
+
+
 
     def process_BF(self):
         """ This is run continuously (repeatedly) during the simulation. DV
