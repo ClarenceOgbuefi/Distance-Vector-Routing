@@ -65,13 +65,44 @@ class DistanceVector(Node):
 
         # Implement the Bellman-Ford algorithm here.  It must accomplish two tasks below:
         # TODO 1. Process queued messages       
-        for msg in self.messages:            
-            pass
+        # for msg in self.messages:            
+        #     pass
         
-        # Empty queue
+        # TODO 1. Takes snapshot of queue and empties it
+        changed = False
+        inbox = self.messages
         self.messages = []
 
-        # TODO 2. Send neighbors updated distances               
+        # TODO 2. Process each message
+        for msg in inbox:
+            origin = msg["from"]
+            vector = msg["vector"]
+
+            if origin not in self.cost_to_neighbors:
+                continue
+            via_cost = self.cost_to_neighbors["origin"]
+
+            for dest, ncost in vector.items(): # Prevent from lowering cost to self
+                if dest == self.name:
+                    continue
+
+                if ncost == -99: # Handles issue of negative infinity
+                    if self.dv.get(dest) != -99:
+                        self.dv[dest] = -99
+                        changed = True
+                    continue
+
+                candidate = via_cost + ncost
+                current = self .dv.get(dest)
+                if current is None or (current != -99 and candidate < current):
+                    self.dv[dest] = candidate
+                    changed = True
+
+        # TODO 2. Send neighbors updated distances 
+        if changed:
+            out = {"from": self.name, "vector": self.dv.copy()}
+            for upstream in self.neighbor_names:
+                self.send_msg(out, upstream)
 
     def log_distances(self):
         """ This function is called immedately after process_BF each round.  It 
@@ -86,4 +117,14 @@ class DistanceVector(Node):
         
         # TODO: Use the provided helper function add_entry() to accomplish this task (see helpers.py).
         # An example call that which prints the format example text above (hardcoded) is provided.        
-        add_entry("A", "(A,0) (B,1) (C,-2)")        
+        add_entry("A", "(A,0) (B,1) (C,-2)")    
+        entries = []
+        entries.append(f"({self.name},0)")   
+
+        for dest, cost in self.dv.items():
+            if dest == self.name:
+                continue
+            entries.append(f"(dest,cost)")
+        
+        line = " ".join(entries)
+        add_entry(self.name, line)
