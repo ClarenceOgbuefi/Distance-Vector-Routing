@@ -19,7 +19,6 @@ from Node import *
 from helpers import *
 
 NEG_INF = -99
-THRESHOLD = -100 # Added to account for any cost below 
 
 class DistanceVector(Node):
     
@@ -30,18 +29,14 @@ class DistanceVector(Node):
 
 
         super(DistanceVector, self).__init__(name, topolink, outgoing_links, incoming_links)
-        self.dv = {self.name: 0} # Best known cost to destinations
-        self.cost_to_neighbors = {} # Maps neighbor name to weight
+        self.dv = {self.name: 0} # initializes table with one entry (self where cost to recah is 0)
+        self.cost_to_neighbors = {} # Builds map os reachable neighbors and their cost to reach them
         # self.next_hop = {}
         for nb in self.outgoing_links: # Initial knowledge
             weight_int = int(nb.weight)
             self.cost_to_neighbors[nb.name] = weight_int
             self.dv[nb.name] = weight_int
 
-
-
-        
-        # TODO: Create any necessary data structure(s) to contain the Node's internal state / distance vector data
 
     def send_initial_messages(self):
         """ This is run once at the beginning of the simulation, after all
@@ -58,7 +53,7 @@ class DistanceVector(Node):
         # Called initially to advertise distances to upstream neighbors
         if not self.neighbor_names:
             return
-        msg = {"from": self.name, "vector": self.dv.copy()}
+        msg = {"from": self.name, "vector": self.dv.copy()} # Felt it was better to captures snapshot using copy > solution for accidental mutations, etc.
         for upstream in self.neighbor_names:
             self.send_msg(msg, upstream)
 
@@ -74,7 +69,7 @@ class DistanceVector(Node):
 
         # Called every round to consume DV messages, perform Bellman-Ford Alg, and advertise updates to upstream neighbors
         changed = False
-        inbox = self.messages # Snaptshot
+        inbox = self.messages # Snaptshot before clearing messages
         self.messages = []
 
         # TODO 2. Process each message
@@ -90,24 +85,24 @@ class DistanceVector(Node):
                 continue
 
             try:
-                via_cost = int(self.cost_to_neighbors[origin]) # Issue at end with variable types so just casting to int
+                via_cost = int(self.cost_to_neighbors[origin]) # Cost to reach neighbor to be used as next hop (Issue at end with variable types so just casting to int)
             except (TypeError, ValueError):
                 continue
 
-            for dest, ncost in vector.items(): # Prevent from lowering cost to self
+            for dest, ncost in vector.items(): # Prevent from changing cost to self
                 if dest == self.name:
                     if dest not in self.dv:
                         self.dv[dest] = 0
                     continue
 
-                if ncost == NEG_INF or ncost == str(NEG_INF): # Handles issue of negative infinity
+                if ncost == NEG_INF or ncost == str(NEG_INF): # Handles issue of negative infinity (issue with variable type so changed so it accepts str and int)
                     if self.dv.get(dest) != NEG_INF:
                         self.dv[dest] = NEG_INF
                         changed = True
                     continue
      
                 try:
-                    ncost_int = int(ncost) 
+                    ncost_int = int(ncost) # variable type fix
                 except (TypeError, ValueError):
                     continue
 
@@ -120,12 +115,12 @@ class DistanceVector(Node):
                 # if current == NEG_INF:
                 #     continue
 
-                if current is None or candidate < int(current):
+                if current is None or candidate < int(current): # updates if path to destination via origin has lower cost than current best
                     self.dv[dest] = candidate
                     changed = True
 
         # TODO 3. Send neighbors updated distances 
-        if changed:
+        if changed: # Advertises only upon changes
             out = {"from": self.name, "vector": self.dv.copy()}
             for upstream in self.neighbor_names:
                 self.send_msg(out, upstream)
