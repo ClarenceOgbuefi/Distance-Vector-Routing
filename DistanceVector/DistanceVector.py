@@ -18,6 +18,7 @@
 from Node import *
 from helpers import *
 
+NEG_INF = -99
 
 class DistanceVector(Node):
     
@@ -31,10 +32,10 @@ class DistanceVector(Node):
         self.dv = {self.name: 0}
         self.cost_to_neighbors = {}
         self.next_hop = {}
-        NEG_INF = -99
         for nb in self.outgoing_links: # Initial knowledge
-            self.cost_to_neighbors[nb.name] = nb.weight
-            self.dv[nb.name] = nb.weight
+            weight_int = int(nb.weight)
+            self.cost_to_neighbors[nb.name] = weight_int
+            self.dv[nb.name] = weight_int
 
 
 
@@ -63,11 +64,7 @@ class DistanceVector(Node):
         messages from other nodes are received here, processed, and any new DV
         messages that need to be sent to other nodes as a result are sent. """
 
-        # Implement the Bellman-Ford algorithm here.  It must accomplish two tasks below:
-        # TODO 1. Process queued messages       
-        # for msg in self.messages:            
-        #     pass
-        
+        # Implement the Bellman-Ford algorithm here.  It must accomplish two tasks below:     
         # TODO 1. Takes snapshot of queue and empties it
         changed = False
         inbox = self.messages
@@ -80,21 +77,30 @@ class DistanceVector(Node):
 
             if origin not in self.cost_to_neighbors:
                 continue
-            via_cost = self.cost_to_neighbors["origin"]
+            via_cost = int(self.cost_to_neighbors[origin]) # Issue at end with variable types so just casting to int
 
             for dest, ncost in vector.items(): # Prevent from lowering cost to self
                 if dest == self.name:
                     continue
 
-                if ncost == -99: # Handles issue of negative infinity
-                    if self.dv.get(dest) != -99:
-                        self.dv[dest] = -99
+                if ncost == NEG_INF or ncost == str(NEG_INF): # Handles issue of negative infinity
+                    if self.dv.get(dest) != NEG_INF:
+                        self.dv[dest] = NEG_INF
                         changed = True
+                    continue
+     
+                try:
+                    ncost_int = int(ncost) 
+                except (TypeError, ValueError):
                     continue
 
                 candidate = via_cost + ncost
-                current = self .dv.get(dest)
-                if current is None or (current != -99 and candidate < current):
+                current = self.dv.get(dest)
+
+                if current == NEG_INF:
+                    continue
+
+                if current is None or (current != -99 and candidate < int(current)):
                     self.dv[dest] = candidate
                     changed = True
 
@@ -117,14 +123,11 @@ class DistanceVector(Node):
         
         # TODO: Use the provided helper function add_entry() to accomplish this task (see helpers.py).
         # An example call that which prints the format example text above (hardcoded) is provided.        
-        add_entry("A", "(A,0) (B,1) (C,-2)")    
-        entries = []
-        entries.append(f"({self.name},0)")   
-
+        # add_entry("A", "(A,0) (B,1) (C,-2)")    
+        parts = [f"({self.name},0)"]  # self always 0
         for dest, cost in self.dv.items():
             if dest == self.name:
                 continue
-            entries.append(f"(dest,cost)")
-        
-        line = " ".join(entries)
+            parts.append(f"({dest},{cost})")
+        line = " ".join(parts)
         add_entry(self.name, line)
