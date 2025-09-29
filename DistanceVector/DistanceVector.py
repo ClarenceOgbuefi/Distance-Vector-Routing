@@ -95,8 +95,8 @@ class DistanceVector(Node):
                         self.dv[dest] = 0
                     continue
 
-                if ncost == NEG_INF or ncost == str(NEG_INF): # Handles issue of negative infinity (issue with variable type so changed so it accepts str and int)
-                    if self.dv.get(dest) != NEG_INF:
+                if ncost == NEG_INF or ncost == str(NEG_INF): # issue with variable type so changed so it accepts str and int
+                    if self.dv.get(dest) != NEG_INF:  # updates destination if neighbor passes message that destination is at -99
                         self.dv[dest] = NEG_INF
                         changed = True
                     continue
@@ -106,14 +106,14 @@ class DistanceVector(Node):
                 except (TypeError, ValueError):
                     continue
 
-                if ncost_int < NEG_INF: # Handles cases where cost is less than -99 
+                if ncost_int < NEG_INF: # Handles cases where cost is less than -99 (propagates as -99)
                     ncost_int = NEG_INF
 
                 if self.dv.get(dest) == NEG_INF:
                     continue
 
                 candidate = via_cost + ncost
-                if candidate < NEG_INF: # Handles cases where cost is less than -99 
+                if candidate < NEG_INF: # Handles cases where cost is less than -99 (propagates as -99)
                     candidate = NEG_INF
                 current = self.dv.get(dest)
 
