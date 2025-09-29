@@ -106,10 +106,15 @@ class DistanceVector(Node):
                 except (TypeError, ValueError):
                     continue
 
+                if ncost_int < NEG_INF:
+                    ncost_int = NEG_INF
+
                 if self.dv.get(dest) == NEG_INF:
                     continue
 
                 candidate = via_cost + ncost
+                if candidate < NEG_INF:
+                    candidate = NEG_INF
                 current = self.dv.get(dest)
 
                 # if current == NEG_INF:
